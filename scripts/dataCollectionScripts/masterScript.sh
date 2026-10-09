@@ -21,7 +21,8 @@
 #
 
 DATA_DIR="/Volumes/Untitled/5G_Measurements/data" #Replace "Volumes" with the appropriate path to your external drive
-
+ROUNDS=${1:-1}   # how many rounds to run;
+LOCATION=${2:-Bharti501}
 
 #  ------------------------- Configuration -------------------------
 SSH_USER="apple"
@@ -32,14 +33,11 @@ REMOTE_SCRIPT_ARGS=""
 REMOTE_PID_FILE="/tmp/remote_capture_script.pid"
 REMOTE_LOG_FILE="/tmp/remote_capture_script.log"
 DATE=$(date +%Y%m%d)
-ROUNDS=${1:-1}   # how many rounds to run; 
 SSH_KEY_PASSPHRASE="apple"
 SSH_CMD_TIMEOUT=30 
 # ----------------------
 
 ISP=('Airtel' 'Jio' 'Vodafone')
-LOCATION=('Bharti501')
-
 SSH_DELAY=25 
 
 
