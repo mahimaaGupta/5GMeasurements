@@ -13,6 +13,7 @@ Runs the cellular data collection across all connected phones and saves the logs
 **Example**
 
 ```bash
+chmod +x scripts/dataCollectionScripts/masterScript.sh
 ./scripts/dataCollectionScripts/masterScript.sh 4 Bharti501
 ```
 
