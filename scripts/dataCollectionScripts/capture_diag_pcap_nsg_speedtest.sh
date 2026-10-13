@@ -173,15 +173,22 @@ fi
 adb -s $DEVICEID shell su -c "test -f $WORKDIR/cacert.pem" 2>/dev/null || \
 adb -s $DEVICEID shell su -c "curl -s -k -o $WORKDIR/cacert.pem https://curl.se/ca/cacert.pem"
 
+
+# Start PCAP for the speedtest (saved next to the dummy-VC pcap in the output dir)
+echo -e "${GREEN}[✓]${NC} Starting speedtest PCAP on interface: $ACTIVE_IFACE"
+SPEEDTEST_PCAP_FILE="${DIAG_DIR_SPEEDTEST}/speedtest_$TIMESTAMP.pcap"
+adb -s $DEVICEID shell su -c "tcpdump -i $ACTIVE_IFACE -w $SPEEDTEST_PCAP_FILE" &>/dev/null &
+SPEEDTEST_TCPDUMP_PID=$!
+sleep 2   # give tcpdump a moment to open the interface
+
 # --- Get a signed access-token URL for the specific site, from the HOST ---
 echo -e "\n[*] Querying Locate API for site: ${SITE}..."
 LOCATE_RESP=$(curl -s "https://locate.measurementlab.net/v2/nearest/ndt/ndt7?site=${SITE}")
 
 DL_URL=$(echo "$LOCATE_RESP" | jq -r '.results[0].urls["wss:///ndt/v7/download"] // empty')
-UL_URL=$(echo "$LOCATE_RESP" | jq -r '.results[0].urls["wss:///ndt/v7/upload"] // empty')
 MACHINE=$(echo "$LOCATE_RESP" | jq -r '.results[0].machine // "unknown"')
 
-if [ -z "$DL_URL" ] || [ -z "$UL_URL" ]; then
+if [ -z "$DL_URL" ]; then
     echo -e "${RED}[✗]${NC} Could not get a valid ndt7 URL for site ${SITE} (it may be unhealthy/offline right now)."
     echo "Locate API response: $LOCATE_RESP"
     exit 1
@@ -195,7 +202,7 @@ start_qmdl_logger "$DIAG_DIR_SPEEDTEST"
 # Execute ndt7 (download + upload) in Background
 echo -e "\n[*] Starting ndt7 speedtest in background..."
 NDT7_RESULTS_FILE=$(mktemp)
-echo -e "[*] Running download test against ${MACHINE}..."
+echo -e "[*] Running speed test against ${MACHINE}..."
 DL_RESULTS_FILE=$(mktemp)
 
 adb -s $DEVICEID shell su -c "SSL_CERT_FILE=$WORKDIR/cacert.pem $WORKDIR/ndt7-client -service-url='$DL_URL'" > "$DL_RESULTS_FILE" 2>&1
@@ -203,31 +210,20 @@ DL_EXIT_CODE=$?
 
 # Conditional check for Download
 if [ $DL_EXIT_CODE -ne 0 ]; then
-    echo -e "[-] ERROR: Download test failed with exit code $DL_EXIT_CODE."
+    echo -e "[-] ERROR: Speed test failed with exit code $DL_EXIT_CODE."
     echo -e "[*] Printing error logs from device:"
     cat "$DL_RESULTS_FILE"
     rm -f "$DL_RESULTS_FILE"
     exit 1
 else
-    echo -e "[+] Download test completed successfully."
+    echo -e "[+] Speed test completed successfully."
 fi
-echo -e "[*] Running upload test against ${MACHINE}..."
-UL_RESULTS_FILE=$(mktemp)
-adb -s $DEVICEID shell su -c "SSL_CERT_FILE=$WORKDIR/cacert.pem $WORKDIR/ndt7-client -service-url='$UL_URL'" > "$UL_RESULTS_FILE" 2>&1
-UL_EXIT_CODE=$?
 
-# Conditional check for Upload
-if [ $UL_EXIT_CODE -ne 0 ]; then
-    echo -e "[-] ERROR: Upload test failed with exit code $UL_EXIT_CODE."
-    echo -e "[*] Printing error logs from device:"
-    cat "$UL_RESULTS_FILE"
-    rm -f "$UL_RESULTS_FILE"
-    exit 1
-else
-    echo -e "[+] Upload test completed successfully."
-fi
-# Stop the speedtest logger immediately after the test completes
-echo -e "${YELLOW}[*]${NC} Speedtest complete. Stopping speedtest QMDL logger..."
+# Stop the speedtest PCAP and QMDL logger immediately after the test completes
+echo -e "${YELLOW}[*]${NC} Speedtest finished. Stopping speedtest PCAP and QMDL logger..."
+adb -s $DEVICEID shell su -c 'pkill tcpdump' 2>/dev/null || true
+kill $SPEEDTEST_TCPDUMP_PID 2>/dev/null || true
+sleep 1   # let tcpdump flush the file
 stop_qmdl_logger_graceful
 
 # Synchronously pull files before removing on-device directories
@@ -238,11 +234,10 @@ adb -s "$DEVICEID" pull "${DIAG_DIR_SPEEDTEST}/." "${SPEEDTEST_PULL_DIR}/" >/dev
 kill_qmdl_logger
 
 # Wait for ndt7 to finish
-RAW_RESULTS="$(cat "$DL_RESULTS_FILE") 
-$(cat "$UL_RESULTS_FILE")"
+RAW_RESULTS="$(cat "$DL_RESULTS_FILE")"
 DOWN=$(grep -A5 "Download" "$DL_RESULTS_FILE" | grep "Throughput" | tail -n 1 | grep -oE '[0-9]+(\.[0-9]+)?' | head -n 1)
-UP=$(grep -A5 "Upload" "$UL_RESULTS_FILE" | grep "Throughput" | tail -n 1 | grep -oE '[0-9]+(\.[0-9]+)?' | head -n 1)
-rm -f "$DL_RESULTS_FILE" "$UL_RESULTS_FILE"
+UP=$(grep -A5 "Upload" "$DL_RESULTS_FILE" | grep "Throughput" | tail -n 1 | grep -oE '[0-9]+(\.[0-9]+)?' | head -n 1)
+rm -f "$DL_RESULTS_FILE"
 
 CLEAN_RESULTS=$(echo "$RAW_RESULTS" | tr -d '\033' | sed 's/\[[0-9;]*m//g')
 TEST_RESULTS=$(echo "$CLEAN_RESULTS" | sed -n '/Test results/,/Upload/ { /Upload/!p; }; /Upload/,/Latency/p')

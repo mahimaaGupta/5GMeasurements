@@ -22,7 +22,7 @@
 
 DATA_DIR="/Volumes/Untitled/5G_Measurements/data" #Replace "Volumes" with the appropriate path to your external drive
 ROUNDS=${1:-1}   # how many rounds to run;
-LOCATION=${2:-Bharti501}
+LOCATION=${2:-Ground}
 
 #  ------------------------- Configuration -------------------------
 SSH_USER="apple"
@@ -45,6 +45,15 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
+
+# ------------------------- Pre-flight checks -------------------------
+# Git does not preserve file permissions, so a freshly cloned key is usually
+# 0644, which SSH refuses to use. Fix it here so it works on any laptop.
+if [ ! -f "$SSH_KEY" ]; then
+    echo -e "${RED}[SSH]${NC} Key not found at $SSH_KEY (run this script from the repo root)."
+    exit 1
+fi
+chmod 600 "$SSH_KEY"
 
 ssh_cmd() {
     local remote_cmd="$1"
@@ -82,7 +91,7 @@ stop_remote_script() {
     ssh_cmd "pkill -9 -f dummyConference.py"
 }
 
-for ((round = 0; round < ROUNDS; round++)); do
+for ((round = 1; round <= ROUNDS; round++)); do
     echo -e "${GREEN}══════════════════════════════════════════════════════════${NC}"
     echo -e "${GREEN}  ROUND $round starting  |  $(date '+%Y-%m-%d %H:%M:%S')${NC}"
     echo -e "${GREEN}══════════════════════════════════════════════════════════${NC}"
@@ -128,6 +137,10 @@ for ((round = 0; round < ROUNDS; round++)); do
     echo -e "${GREEN}[✓]${NC} Round $round complete."
     echo ""
 
+    if [ $((round % 4)) -eq 0 ]; then
+        echo -e "${YELLOW}[*]${NC} Waiting 5 minutes before starting next round..."
+        sleep 300
+    fi
 done
 
 echo -e "${GREEN}[✓]${NC} All $ROUNDS round(s) completed."

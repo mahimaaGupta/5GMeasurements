@@ -13,13 +13,13 @@ Runs the cellular data collection across all connected phones and saves the logs
 **Example**
 
 ```bash
-./scripts/dataCollectionScripts/masterScript.sh 4 bharti501
+./scripts/dataCollectionScripts/masterScript.sh 4 Bharti501
 ```
 
 | Argument     | Meaning                        | Example     |
 |--------------|--------------------------------|-------------|
 | `num_runs`   | Number of runs to perform      | `4`         |
-| `location`   | Name of the test location      | `bharti501` |
+| `location`   | Name of the test location      | `Bharti501` |
 
 > **Important:** Run the command from **outside** the `scripts` folder (i.e., from the repository root), exactly as shown above.
 
@@ -60,7 +60,7 @@ data/<operator>/<location>/<date>/run
 | Placeholder  | Meaning                                   |
 |--------------|-------------------------------------------|
 | `<operator>` | Operator name (one folder per operator)   |
-| `<location>` | Location passed to the script, e.g. `bharti501` |
+| `<location>` | Location passed to the script, e.g. `Bharti501` |
 | `<date>`     | Date of the test                          |
 
 If QMDL files are missing for any operator, stop the test, check that device's connection (`adb devices`), and restart the collection.
