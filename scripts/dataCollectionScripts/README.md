@@ -7,19 +7,19 @@ Runs the cellular data collection across all connected phones and saves the logs
 Please give execute permission before running the script. 
 
 ```bash
-chmod +x scripts/dataCollectionScripts/masterScript.sh
+chmod +x scripts/dataCollectionScripts/masterScript_with_dummyVS.sh
 ```
 
 ## Usage
 
 ```bash
-./scripts/dataCollectionScripts/masterScript.sh <num_runs> <location>
+./scripts/dataCollectionScripts/masterScript_with_dummyVS.sh <num_runs> <location>
 ```
 
 **Example**
 
 ```bash
-./scripts/dataCollectionScripts/masterScript.sh 4 Bharti501
+./scripts/dataCollectionScripts/masterScript_with_dummyVS.sh 4 Bharti501
 ```
 
 | Argument     | Meaning                        | Example     |
@@ -51,7 +51,7 @@ If any device is missing (or shows `unauthorized` / `offline`):
 Make sure the hard drive is connected and mounted before starting.
 
 - **macOS users:** No changes needed. The script uses `/Volumes/...` by default.
-- **Linux / Windows users:** Open `scripts/dataCollectionScripts/masterScript.sh` and update the `DATA_DIR` variable. Replace `Volumes` with the correct mount path of your hard drive.
+- **Linux / Windows users:** Open `scripts/dataCollectionScripts/masterScript_with_dummyVS.sh` and update the `DATA_DIR` variable. Replace `Volumes` with the correct mount path of your hard drive.
 
 ---
 
